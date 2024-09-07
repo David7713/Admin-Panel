@@ -28,6 +28,6 @@ To set up the project locally:
 
 ```bash
 git clone https://github.com/YourUsername/Admin-Dashboard.git
-cd Admin-Dashboard
+cd Admin-Panel
 npm install
 npm run dev
