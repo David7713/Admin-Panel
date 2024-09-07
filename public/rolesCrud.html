@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Roles CRUD</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #e0f7e0;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 128, 0, 0.4);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 500px;
+        }
+
+        .close {
+            color: #008000;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        button {
+            margin-top: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .permissions-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .permissions-table th,
+        .permissions-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .permissions-table th {
+            background-color: #f0f0f0;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Roles Management</h1>
+    <button onclick="showAddRoleModal()">Add New Role</button>
+    <table id="rolesTable">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Title</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+
+    <!-- Add Role Modal -->
+    <div id="addModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Add New Role</h2>
+            <form id="addForm">
+                <label for="newRoleTitle">Title:</label>
+                <input type="text" id="newRoleTitle" required>
+                <button type="submit">Add Role</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Role Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Edit Role</h2>
+            <form id="editForm">
+                <input type="hidden" id="editRoleId">
+                <label for="editRoleTitle">Title:</label>
+                <input type="text" id="editRoleTitle" required>
+                <button type="submit">Save</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Permissions Modal -->
+    <div id="permissionsModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closePermissionsModal()">&times;</span>
+            <h2>Role Permissions</h2>
+            <table class="permissions-table">
+                <thead>
+                    <tr>
+                        <th>Action</th>
+                        <th>Allow</th>
+                    </tr>
+                </thead>
+                <tbody id="permissionsTableBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const permissionsModal = document.getElementById('permissionsModal');
+        const permissionsTableBody = document.getElementById('permissionsTableBody');
+        const addModal = document.getElementById('addModal');
+        const editModal = document.getElementById('editModal');
+        const addForm = document.getElementById('addForm');
+        const editForm = document.getElementById('editForm');
+        const closeBtns = document.getElementsByClassName('close');
+
+        async function fetchRolePermissions(roleId) {
+            try {
+                const token = getToken();
+                const response = await fetch(`http://localhost:3006/api/roles/${roleId}/permissions`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    const permissions = await response.json();
+                    displayPermissions(permissions);
+                    permissionsModal.style.display = 'block';
+                } else {
+                    console.error('Failed to fetch role permissions');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        function displayPermissions(permissions) {
+            permissionsTableBody.innerHTML = '';
+            permissions.forEach(permission => {
+                const row = document.createElement('tr');
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.checked = permission.allow;
+                checkbox.addEventListener('change', async () => {
+                    try {
+                        const token = getToken();
+                        const response = await fetch(`http://localhost:3006/api/roles/permissions/${permission.id}`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify({ allow: checkbox.checked })
+                        });
+
+                        if (response.ok) {
+                            console.log('Permission updated successfully');
+                        } else {
+                            console.error('Failed to update permission');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                    }
+                });
+                row.innerHTML = `
+      <td>${permission.action}</td>
+    `;
+                row.appendChild(checkbox);
+                permissionsTableBody.appendChild(row);
+            });
+        }
+        function closePermissionsModal() {
+            permissionsModal.style.display = 'none';
+        }
+
+        function showAddRoleModal() {
+            addModal.style.display = 'block';
+        }
+
+        addForm.onsubmit = async function (e) {
+            e.preventDefault();
+            const title = document.getElementById('newRoleTitle').value;
+
+            try {
+                const token = getToken();
+                const response = await fetch('http://localhost:3006/api/roles', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ title })
+                });
+
+                if (response.ok) {
+                    addModal.style.display = 'none';
+                    document.getElementById('newRoleTitle').value = '';
+                    fetchRoles();
+                } else {
+                    console.error('Failed to add role');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        };
+
+        function editRole(id, title) {
+            document.getElementById('editRoleId').value = id;
+            document.getElementById('editRoleTitle').value = title;
+            editModal.style.display = 'block';
+        }
+
+        editForm.onsubmit = async function (e) {
+            e.preventDefault();
+            const id = document.getElementById('editRoleId').value;
+            const title = document.getElementById('editRoleTitle').value;
+
+            try {
+                const token = getToken();
+                const response = await fetch(`http://localhost:3006/api/roles/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ title })
+                });
+
+                if (response.ok) {
+                    editModal.style.display = 'none';
+                    fetchRoles();
+                } else {
+                    console.error('Failed to update role');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        };
+
+        async function deleteRole(id) {
+            if (confirm('Are you sure you want to delete this role?')) {
+                try {
+                    const token = getToken();
+                    const response = await fetch(`http://localhost:3006/api/roles/${id}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+
+                    if (response.ok) {
+                        fetchRoles();
+                    } else {
+                        console.error('Failed to delete role');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                }
+            }
+        }
+
+        function getToken() {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; token=`);
+            return parts.length === 2 ? parts.pop().split(';').shift() : "";
+        }
+
+        document.querySelectorAll('.close').forEach(closeBtn => {
+            closeBtn.onclick = function () {
+                addModal.style.display = 'none';
+                editModal.style.display = 'none';
+                permissionsModal.style.display = 'none';
+            }
+        });
+
+        window.onclick = function (event) {
+            if (event.target === addModal) {
+                addModal.style.display = 'none';
+            }
+            if (event.target === editModal) {
+                editModal.style.display = 'none';
+            }
+            if (event.target === permissionsModal) {
+                permissionsModal.style.display = 'none';
+            }
+        }
+
+        async function fetchRoles() {
+            try {
+                const token = getToken();
+                const response = await fetch('http://localhost:3006/api/roles', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    const roles = await response.json();
+                    const tbody = document.querySelector('#rolesTable tbody');
+                    tbody.innerHTML = '';
+
+                    roles.forEach(role => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${role.id}</td>
+                            <td>${role.title}</td>
+                            <td>
+                                <button onclick="fetchRolePermissions(${role.id})">Permissions</button>
+                                <button onclick="editRole(${role.id}, '${role.title}')">Edit</button>
+                                <button onclick="deleteRole(${role.id})">Delete</button>
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                } else {
+                    console.error('Failed to fetch roles');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        fetchRoles();
+    </script>
+</body>
+
+</html>

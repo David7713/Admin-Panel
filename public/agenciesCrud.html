@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agencies CRUD</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f4f8;
+        }
+
+        .role-dropdown {
+            margin-left: 10px;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            background-color: #ffffff;
+            color: #000;
+            font-size: 14px;
+            cursor: pointer;
+
+        }
+
+        .role-dropdown option {
+            color: #000;
+            background-color: #fff;
+
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 30px auto;
+            padding: 20px;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+
+        h1 {
+            text-align: center;
+            color: #2c6e49;
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            color: #2c6e49;
+            margin-bottom: 10px;
+        }
+
+
+        form {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+
+        input[type="text"] {
+            width: calc(100% - 18px);
+            padding: 10px;
+            margin: 8px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        button {
+            padding: 12px 20px;
+            background-color: #28a745;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #218838;
+
+        }
+
+        button.update-button {
+            background-color: #17a2b8;
+
+        }
+
+        button.update-button:hover {
+            background-color: #138496;
+
+        }
+
+        button.delete-button {
+            background-color: #dc3545;
+
+        }
+
+        button.delete-button:hover {
+            background-color: #c82333;
+            /
+        }
+
+        button.users-button {
+            background-color: #ffc107;
+
+        }
+
+        button.users-button:hover {
+            background-color: #e0a800;
+            /
+        }
+
+
+        .agency-list {
+            margin-top: 20px;
+        }
+
+        .agency-item {
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #ffffff;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+        }
+
+        .agency-item strong {
+            font-size: 18px;
+            color: #333;
+        }
+
+        .agency-item button {
+            margin-left: 10px;
+        }
+
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgb(0, 0, 0);
+            background-color: rgba(0, 0, 0, 0.4);
+            padding-top: 60px;
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 800px;
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+
+<body>
+    <div class="container">
+        <h1>Manage Agencies</h1>
+
+        <!-- Create Agency Form -->
+        <form id="createAgencyForm">
+            <h2>Create Agency</h2>
+            <input type="text" id="agencyName" placeholder="Agency Name" required>
+            <button type="submit">Create</button>
+        </form>
+
+        <!-- Update Agency Form -->
+        <form id="updateAgencyForm" style="display: none;">
+            <h2>Update Agency</h2>
+            <input type="hidden" id="updateAgencyId">
+            <input type="text" id="updateAgencyName" placeholder="New Agency Name" required>
+            <button type="submit">Update</button>
+        </form>
+
+        <!-- List Agencies -->
+        <div class="agency-list" id="agencyList">
+            <h2>Agencies List</h2>
+            <!-- Agencies will be listed here -->
+        </div>
+
+        <!-- Users Modal -->
+        <div id="usersModal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeUsersModal()">&times;</span>
+                <h2>Users List</h2>
+                <input type="hidden" id="currentAgencyId"> <!-- Hidden field to store current agency ID -->
+                <div id="usersList"></div>
+                <button onclick="assignUsers()">Assign Users</button>
+            </div>
+        </div>
+
+
+
+
+    </div>
+
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const createAgencyForm = document.getElementById('createAgencyForm');
+        const updateAgencyForm = document.getElementById('updateAgencyForm');
+        const agencyList = document.getElementById('agencyList');
+        const usersModal = document.getElementById('usersModal');
+        const usersList = document.getElementById('usersList');
+        const currentAgencyId = document.getElementById('currentAgencyId');
+
+        // Fetch agencies and display them
+        const fetchAgencies = async () => {
+            try {
+                const response = await fetch('/api/agencies');
+                const agencies = await response.json();
+                agencyList.innerHTML = '<h2>Agencies List</h2>';
+                agencies.forEach(agency => {
+                    const div = document.createElement('div');
+                    div.className = 'agency-item';
+                    div.innerHTML = `
+                        <strong>${agency.name}</strong>
+                        <button class="delete-button" onclick="deleteAgency(${agency.id})">Delete</button>
+                        <button class="update-button" onclick="showUpdateForm(${agency.id}, '${agency.name}')">Update</button>
+                        <button class="users-button" onclick="showUsers(${agency.id})">Users</button>
+                    `;
+                    agencyList.appendChild(div);
+                });
+            } catch (err) {
+                console.error('Error fetching agencies:', err);
+            }
+        };
+
+        fetchAgencies();
+
+        // CREATE
+        createAgencyForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('agencyName').value;
+            try {
+                const response = await fetch('/api/agencies', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ name })
+                });
+                const result = await response.json();
+                alert('Agency created successfully!');
+                fetchAgencies();
+            } catch (err) {
+                console.error('Error creating agency:', err);
+            }
+        });
+
+        // UPDATE
+        updateAgencyForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('updateAgencyId').value;
+            const name = document.getElementById('updateAgencyName').value;
+            try {
+                const response = await fetch(`/api/agencies/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ name })
+                });
+                const result = await response.json();
+                alert('Agency updated successfully!');
+                updateAgencyForm.style.display = 'none';
+                fetchAgencies();
+            } catch (err) {
+                console.error('Error updating agency:', err);
+            }
+        });
+
+        // UPDATE FORM
+        window.showUpdateForm = (id, name) => {
+            document.getElementById('updateAgencyId').value = id;
+            document.getElementById('updateAgencyName').value = name;
+            updateAgencyForm.style.display = 'block';
+        };
+
+        // DELETE
+        window.deleteAgency = async (id) => {
+            try {
+                const response = await fetch(`/api/agencies/${id}`, {
+                    method: 'DELETE'
+                });
+                const result = await response.json();
+                alert('Agency deleted successfully!');
+                fetchAgencies();
+            } catch (err) {
+                console.error('Error deleting agency:', err);
+            }
+        };
+
+        // SHOW USERS
+        window.showUsers = async (agencyId) => {
+    document.getElementById('currentAgencyId').value = agencyId;
+    try {
+        const response = await fetch(`/api/agencies/${agencyId}/users`);
+        const users = await response.json();
+
+        const rolesResponse = await fetch('/api/roles');
+        const roles = await rolesResponse.json();
+
+        usersList.innerHTML = '';
+        users.forEach(user => {
+            const div = document.createElement('div');
+            div.className = 'agency-item';
+            div.innerHTML = `
+                <input type="checkbox" id="user-${user.id}" value="${user.id}" ${user.role_id ? 'checked' : ''}>
+                <label for="user-${user.id}"><strong>${user.name} ${user.surname}</strong></label>
+                <div>Email: ${user.email}</div>
+                <div>Current Role: <span id="user-role-${user.id}">${user.role_title || 'No role assigned'}</span> (ID: ${user.role_id || 'N/A'})</div>
+                <button class="roles-button" onclick="toggleRoleDropdown(${user.id})">Select Role</button>
+                <select id="roleDropdown-${user.id}" class="role-dropdown" style="display: none;">
+                    <option value="">Select role</option>
+                    ${roles.map(role => `<option value="${role.id}" ${user.role_id == role.id ? 'selected' : ''}>${role.title}</option>`).join('')}
+                </select>
+            `;               
+
+            usersList.appendChild(div);
+        });
+
+        usersModal.style.display = 'block';
+    } catch (err) {
+        console.error('Error fetching users:', err);
+        alert(`Failed to fetch users: ${err.message}`);
+    }
+};
+
+        // ASSIGN USERS
+        window.assignUsers = async () => {
+            const agencyId = document.getElementById('currentAgencyId').value;
+            if (!agencyId) {
+                alert('No agency selected. Please try again.');
+                return;
+            }
+            
+            const userRoles = [];
+            const checkboxes = document.querySelectorAll('#usersList input[type="checkbox"]');
+            
+            checkboxes.forEach(checkbox => {
+                const userId = checkbox.value;
+                const roleDropdown = document.getElementById(`roleDropdown-${userId}`);
+                const roleId = roleDropdown ? roleDropdown.value : null;
+                
+                if (checkbox.checked && roleId) {
+                    userRoles.push({ userId, roleId });
+                }
+            });
+
+            if (userRoles.length === 0) {
+                alert('No users selected or roles assigned. Please select users and assign roles.');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/agencies/${agencyId}/assign`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ userRoles })
+                });
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP error! Status: ${response.status}, Message: ${errorText}`);
+                }
+                const result = await response.json();
+                alert('Users assigned successfully!');
+                closeUsersModal();
+                // Remove the following line to prevent reopening the modal
+                // showUsers(agencyId);
+            } catch (err) {
+                console.error('Error assigning users:', err);
+                alert(`Failed to assign users. Error: ${err.message}`);
+            }
+        };
+
+        // CLOSE USERS MODAL
+        window.closeUsersModal = () => {
+            usersModal.style.display = 'none';
+        };
+    });
+
+    window.toggleRoleDropdown = async (userId) => {
+        const dropdown = document.getElementById(`roleDropdown-${userId}`);
+        if (!dropdown) {
+            console.error(`Dropdown with ID roleDropdown-${userId} not found.`);
+            return;
+        }
+        const isVisible = dropdown.style.display === 'block';
+        document.querySelectorAll('.role-dropdown').forEach(dd => dd.style.display = 'none');
+
+        if (!isVisible) {
+            dropdown.style.display = 'block';
+
+            try {
+                const response = await fetch('/api/roles');
+                const roles = await response.json();
+                dropdown.innerHTML = '';
+
+                const defaultOption = document.createElement('option');
+                defaultOption.text = 'Select role';
+                defaultOption.value = '';
+                dropdown.add(defaultOption);
+
+                roles.forEach(role => {
+                    const option = document.createElement('option');
+                    option.value = role.id;
+                    option.text = role.title;
+                    dropdown.add(option);
+                });
+            } catch (err) {
+                console.error('Error fetching roles:', err);
+            }
+        }
+    };
+</script>
+
+
+</body>
+
+</html>

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Role</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            width: 300px;
+        }
+        input {
+            display: block;
+            margin: 10px 0;
+            padding: 10px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        button {
+            padding: 10px 20px;
+            background: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .message {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Add New Role</h2>
+        <form id="roleForm">
+            <input type="text" id="title" placeholder="Role Title" required>
+            <button type="submit">Add Role</button>
+        </form>
+        <div class="message" id="message"></div>
+    </div>
+
+    <script>
+        const getCookie = (name) => {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        };
+    
+        document.getElementById('roleForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+    
+            const title = document.getElementById('title').value;
+            const messageDiv = document.getElementById('message');
+            const token = getCookie('token'); // Get the token from cookie
+    
+            try {
+                const response = await fetch('http://localhost:3006/api/roles', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}` // Use the token here
+                    },
+                    body: JSON.stringify({ title })
+                });
+                
+                const result = await response.json();
+    
+                if (response.ok) {
+                    messageDiv.textContent = `Role added with ID: ${result.roleId}`;
+                    messageDiv.style.color = 'green';
+                    document.getElementById('title').value = ''; // Clear input
+                } else {
+                    messageDiv.textContent = result.message;
+                    messageDiv.style.color = 'red';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                messageDiv.textContent = 'An error occurred';
+                messageDiv.style.color = 'red';
+            }
+        });
+    </script>
+</body>
+</html>
